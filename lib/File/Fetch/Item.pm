@@ -35,14 +35,13 @@ sub new {
     bless $args, $class;
 
     if( lc($args->scheme) ne 'file' and not $args->host ) {
-        warn "Hostname required when fetching from '".$args->scheme."'\n";
-        return;
+        return File::Fetch->_error(loc(
+            "Hostname required when fetching from '%1'",$args->scheme));
     }
     
     for (qw[path file]) {
         unless( $args->$_ ) {
-            warn "No '$_' specified\n";
-            return;
+            return File::Fetch->_error(loc("No '%1' specified",$_));
         }
     }
     

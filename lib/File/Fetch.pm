@@ -21,7 +21,7 @@ use vars    qw[ $VERBOSE $PREFER_BIN $FROM_EMAIL $USER_AGENT
                 $FTP_PASSIVE $DEBUG $WARN
             ];
 
-$VERSION        = 0.03;
+$VERSION        = 0.04;
 $PREFER_BIN     = 0;        # XXX TODO implement
 $FROM_EMAIL     = 'File-Fetch@example.com';
 $USER_AGENT     = 'File::Fetch/$VERSION';
@@ -35,13 +35,18 @@ $WARN           = 1;
 $METHODS = {
     http    => [ qw|lwp wget curl lynx| ],
     ftp     => [ qw|lwp netftp wget curl ncftp ftp| ],
-    file    => [ qw|lwp| ],
+    file    => [ qw|lwp file| ],
     #rsync   => [ qw|rsync| ], # XXX TODO
 };
 
 ### silly warnings ###
 local $Params::Check::VERBOSE     = $Params::Check::VERBOSE     = 1;
 local $Module::Load::Conditional  = $Module::Load::Conditional  = 0;
+
+### see what OS we are on, important for file:// uris ###
+use constant ON_UNIX        => ($^O ne 'MSWin32' and 
+                                $^O ne 'MacOS'   and 
+                                $^O ne 'VMS');
 
 =pod
 
@@ -587,29 +592,36 @@ sub _curl_fetch {
 ### use File::Copy for fetching file:// urls ###
 ### XXX file:// uri to local path conversion is just too weird...
 ### depend on LWP to do it for us
-# sub _file_fetch {
-#     my $self = shift;
-#     my %hash = @_;
-#     
-#     my ($to);
-#     my $tmpl = {
-#         to  => { required => 1, store => \$to }
-#     };     
-#     check( $tmpl, \%hash ) or return;
-#     
-#     my $remote = File::Spec->catfile( $self->path, $self->file );
-#     
-#     ### File::Copy is littered with 'die' statements :( ###
-#     my $rv = eval { File::Copy::copy( $remote, $to ) };
-#     
-#     ### something went wrong ###
-#     if( !$rv or $@ ) {
-#         warn "Could not copy '$remote' to '$to': $! $@";
-#         return;
-#     }
-#     
-#     return $to;
-# }
+sub _file_fetch {
+    my $self = shift;
+    my %hash = @_;
+    
+    my ($to);
+    my $tmpl = {
+        to  => { required => 1, store => \$to }
+    };     
+    check( $tmpl, \%hash ) or return;
+    
+    ### prefix a / on unix systems with a file uri, since it would
+    ### look somewhat like this:
+    ###     file://home/kane/file
+    ### wheras windows file uris might look like:
+    ###     file://C:/home/kane/file
+    my $path    = ON_UNIX ? '/'. $self->path : $self->path;
+    
+    my $remote  = File::Spec->catfile( $path, $self->file );
+    
+    ### File::Copy is littered with 'die' statements :( ###
+    my $rv = eval { File::Copy::copy( $remote, $to ) };
+    
+    ### something went wrong ###
+    if( !$rv or $@ ) {
+        warn "Could not copy '$remote' to '$to': $! $@";
+        return;
+    }
+    
+    return $to;
+}
 
 #################################
 #
@@ -665,7 +677,7 @@ external programs and modules.
 Below is a mapping of what utilities will be used in what order
 for what schemes, if available:
 
-    file    => LWP
+    file    => LWP, file
     http    => LWP, wget, curl, lynx
     ftp     => LWP, Net::FTP, wget, curl, ncftp, ftp
 

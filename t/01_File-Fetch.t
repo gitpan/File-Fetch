@@ -79,10 +79,11 @@ for my $entry (@$map) {
 ### fetch() tests ###
 
 ### file:// tests ###
-{   my $uri = 'file:/'. cwd() .'/'. basename($0);    
+{   
+    my $prefix = &File::Fetch::ON_UNIX ? 'file:/' : 'file://';
+    my $uri = $prefix . cwd() .'/'. basename($0);    
     
-    ### XXX 'file' is disabled 
-    for (qw[lwp]) {
+    for (qw[lwp file]) {
         _fetch_uri( file => $uri, $_ );
     }
 }
