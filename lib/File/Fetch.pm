@@ -21,7 +21,7 @@ use vars    qw[ $VERBOSE $PREFER_BIN $FROM_EMAIL $USER_AGENT
                 $FTP_PASSIVE $DEBUG $WARN
             ];
 
-$VERSION        = 0.04;
+$VERSION        = 0.05;
 $PREFER_BIN     = 0;        # XXX TODO implement
 $FROM_EMAIL     = 'File-Fetch@example.com';
 $USER_AGENT     = 'File::Fetch/$VERSION';
@@ -40,8 +40,10 @@ $METHODS = {
 };
 
 ### silly warnings ###
-local $Params::Check::VERBOSE     = $Params::Check::VERBOSE     = 1;
-local $Module::Load::Conditional  = $Module::Load::Conditional  = 0;
+local $Params::Check::VERBOSE               = 1;
+local $Params::Check::VERBOSE               = 1;
+local $Module::Load::Conditional::VERBOSE   = 0;
+local $Module::Load::Conditional::VERBOSE   = 0;
 
 ### see what OS we are on, important for file:// uris ###
 use constant ON_UNIX        => ($^O ne 'MSWin32' and 
@@ -790,14 +792,6 @@ the $BLACKLIST, $METHOD_FAIL and other internal functions.
     curl        => curl
 
 =head1 FREQUENTLY ASKED QUESTIONS
-
-=head2 Why don't you just use File::Copy for file:// schemes?
-
-It's just too much of a hassle to figure out what to do with volumes
-and paths on any OS that isn't a Unix. C<LWP> however Does The Right
-Thing, so it's easier to use that.
-Besides, if you're just copying a file, you can probably do it 
-yourself :)
 
 =head2 So how do I use a proxy with File::Fetch?
 
