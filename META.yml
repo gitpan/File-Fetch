@@ -1,7 +1,7 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         File-Fetch
-version:      0.02
+version:      0.03
 version_from: lib/File/Fetch.pm
 installdirs:  site
 requires:
@@ -10,6 +10,7 @@ requires:
     File::Path:                    0
     File::Spec:                    0.82
     IPC::Cmd:                      0.04
+    Locale::Maketext::Simple:      0
     Module::Load::Conditional:     0.04
     Params::Check:                 0.07
     Test::More:                    0

@@ -4,6 +4,7 @@ use strict;
 use base 'File::Fetch';
 
 use Params::Check               qw[check];
+use Locale::Maketext::Simple    Style => 'gettext';
 
 $Params::Check::VERBOSE = 1;
 

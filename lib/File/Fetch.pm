@@ -9,17 +9,19 @@ use File::Fetch::Item;
 use File::Basename              qw[dirname];
 
 use Cwd                         qw[cwd];
+use Carp                        qw[carp];
 use IPC::Cmd                    qw[can_run run];
 use File::Path                  qw[mkpath];
 use Params::Check               qw[check];
 use Module::Load::Conditional   qw[can_load];
+use Locale::Maketext::Simple    Style => 'gettext';
 
 use vars    qw[ $VERBOSE $PREFER_BIN $FROM_EMAIL $USER_AGENT
                 $BLACKLIST $METHOD_FAIL $VERSION $METHODS
-                $FTP_PASSIVE $DEBUG
+                $FTP_PASSIVE $DEBUG $WARN
             ];
 
-$VERSION        = 0.02;
+$VERSION        = 0.03;
 $PREFER_BIN     = 0;        # XXX TODO implement
 $FROM_EMAIL     = 'File-Fetch@example.com';
 $USER_AGENT     = 'File::Fetch/$VERSION';
@@ -27,6 +29,7 @@ $BLACKLIST      = [qw|ftp|];
 $METHOD_FAIL    = { };
 $FTP_PASSIVE    = 1;
 $DEBUG          = 0;
+$WARN           = 1;
 
 ### methods available to fetch the file depending on the scheme
 $METHODS = {
@@ -36,7 +39,9 @@ $METHODS = {
     #rsync   => [ qw|rsync| ], # XXX TODO
 };
 
-$Params::Check::VERBOSE = 1;
+### silly warnings ###
+local $Params::Check::VERBOSE     = $Params::Check::VERBOSE     = 1;
+local $Module::Load::Conditional  = $Module::Load::Conditional  = 0;
 
 =pod
 
@@ -52,7 +57,7 @@ File::Fetch -- A generic file fetching mechanism
     my $ff = File::Fetch->new(uri => 'http://some.where.com/dir/a.txt');
     
     ### fetch the uri to cwd() ###
-    my $where = $ff->fetch();
+    my $where = $ff->fetch() or die $ff->error;
     
     ### fetch the uri to /tmp ###
     my $where = $ff->fetch( to => '/tmp' );
@@ -172,10 +177,8 @@ sub fetch {
     ### create the path if it doesn't exist yet ###
     unless( -d $to ) {             
         eval { mkpath( $to ) };
-        if( $@ ) {
-            warn "Could not create path '$to'\n";
-            return;
-        }
+        
+        return $self->_error(loc("Could not create path '%1'",$to)) if $@;
     }               
    
     ### set passive ftp if required ###
@@ -186,7 +189,8 @@ sub fetch {
         my $sub =  '_'.$method.'_fetch';
         
         unless( __PACKAGE__->can($sub) ) {
-            warn "Can not call method for '$method' -- WEIRD!\n";
+            $self->_error(loc("Can not call method for '%1' -- WEIRD!",
+                        $method));
             next;
         }
 
@@ -199,8 +203,8 @@ sub fetch {
         if(my $file = $self->$sub(to=>File::Spec->catfile($to,$self->file))){
             
             unless( -e $file && -s _ ) {
-                warn "'$method' said it fetched '$file', ".
-                     "but it was not created\n";
+                $self->_error(loc("'%1' said it fetched '%2', ".
+                     "but it was not created",$method,$file));
 
                 ### mark the failure ###
                 $METHOD_FAIL->{$method} = 1;
@@ -302,9 +306,9 @@ sub _lwp_fetch {
             return $to;
         
         } else {
-            warn "Fetch failed! HTTP response code: '". $res->code ."' [".
-            HTTP::Status::status_message($res->code). "]\n";     
-            return;            
+            return $self->_error(loc("Fetch failed! HTTP response: %1 %2 [%3]",
+                        $res->code, HTTP::Status::status_message($res->code),
+                        $res->status_line));
         }
     
     } else {       
@@ -332,14 +336,12 @@ sub _netftp_fetch {
         ### make connection ###    
         my $ftp;
         unless( $ftp = Net::FTP->new( $self->host ) ) {
-            warn "Ftp creation failed: $@";
-            return;
+            return $self->_error(loc("Ftp creation failed: %1",$@));
         }
         
         ### login ###
         unless( $ftp->login( anonymous => $FROM_EMAIL ) ) {
-            warn "Could not login to '".$self->host."'\n";
-            return;
+            return $self->_error(loc("Could not login to '%1'",$self->host));
         }
         
         ### set binary mode, just in case ###
@@ -351,8 +353,8 @@ sub _netftp_fetch {
         ### fetch the file ###
         my $target;
         unless( $target = $ftp->get( $remote, $to ) ) {
-            warn "Could not fetch '$remote' from '".$self->host."'\n";
-            return;
+            return $self->_error(loc("Could not fetch '%1' from '%2'",
+                        $remote, $self->host));
         }
         
         ### log out ###
@@ -392,8 +394,7 @@ sub _wget_fetch {
         ### shell out ###
         my $captured;
         unless( run( command => $cmd, buffer => \$captured, verbose => 0 ) ) {
-            warn "Command failed: $captured";
-            return;
+            return $self->_error(loc("Command failed: %1",$captured));
         } 
     
         return $to;
@@ -424,8 +425,7 @@ sub _ftp_fetch {
         local $SIG{CHLD} = 'IGNORE';
         
         unless ($fh->open("|$ftp -n")) {
-            warn "/bin/ftp creation failed: $!\n";
-            return;
+            return $self->_error(loc("%1 creation failed: %2", $ftp, $!));
         }
 
         my @dialog = (
@@ -440,7 +440,7 @@ sub _ftp_fetch {
         );
 
         foreach (@dialog) { $fh->print($_, "\n") }
-        $fh->close;
+        $fh->close or return;
 
         return $to;
     }
@@ -464,10 +464,8 @@ sub _lynx_fetch {
         
         ### write to the output file ourselves, since lynx ass_u_mes to much 
         my $local = FileHandle->new(">$to") 
-                        or (
-                            warn ("Could not open '$to' for writing: $!\n"), 
-                            return 
-                        );
+                        or return $self->_error(loc(
+                            "Could not open '%1' for writing: %2",$to,$!));
         
         ### dump to stdout ###
         my $cmd = [
@@ -483,8 +481,7 @@ sub _lynx_fetch {
                     buffer  => \$captured, 
                     verbose => $DEBUG ) 
         ) {
-            warn "Command failed: $captured";
-            return;
+            return $self->_error(loc("Command failed: %1",$captured));
         } 
     
         ### print to local file ###
@@ -533,8 +530,7 @@ sub _ncftp_fetch {
                     buffer  => \$captured, 
                     verbose => $DEBUG ) 
         ) {
-            warn "Command failed: $captured";
-            return;
+            return $self->_error(loc("Command failed: %1",$captured));
         } 
     
         return $to;
@@ -576,8 +572,7 @@ sub _curl_fetch {
                     verbose => $DEBUG ) 
         ) {
         
-            warn "command failed: $captured";
-            return;
+            return $self->_error(loc("Command failed: %1",$captured));
         }
 
         return $to;
@@ -615,6 +610,48 @@ sub _curl_fetch {
 #     
 #     return $to;
 # }
+
+#################################
+#
+# Error code 
+#
+#################################
+
+=pod
+
+=head2 $ff->error([BOOL])
+
+Returns the last encountered error as string.
+Pass it a true value to get the C<Carp::longmess()> output instead.
+
+=cut
+
+### Error handling, the way Archive::Tar does it ###
+{
+    my $error       = '';
+    my $longmess    = '';
+    
+    sub _error {
+        my $self    = shift;
+        $error      = shift;
+        $longmess   = Carp::longmess($error);
+        
+        ### set Archive::Tar::WARN to 0 to disable printing
+        ### of errors
+        if( $WARN ) {
+            carp $DEBUG ? $longmess : $error;
+        }
+        
+        return;
+    }
+    
+    sub error {
+        my $self = shift;
+        return shift() ? $longmess : $error;          
+    }
+}
+
+
 
 1;
 
@@ -680,10 +717,25 @@ Default value is 1.
 Note: When $FTP_PASSIVE is true, C<ncftp> will not be used to fetch
 files, since passive mode can only be set interactively for this binary
 
+=head2 $File::Fetch::WARN
+
+This variable controls whether errors encountered internally by 
+C<File::Fetch> should be C<carp>'d or not. 
+
+Set to false to silence warnings. Inspect the output of the C<error()> 
+method manually to see what went wrong.
+
+Defaults to C<true>.
+
 =head2 $File::Fetch::DEBUG
 
 This enables debugging output when calling commandline utilities to 
 fetch files.
+This also enables C<Carp::longmess> errors, instead of the regular
+C<carp> errors.
+
+Good for tracking down why things don't work with your particular 
+setup.
 
 Default is 0.
 

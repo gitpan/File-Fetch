@@ -119,12 +119,19 @@ sub _fetch_uri {
     my $ff  = File::Fetch->new( uri => $uri );
     
     ok( $ff,        "FF object for $uri (will fetch with $method)" );
-    
-    my $file = $ff->fetch( to => 'tmp' );
-    ok( $file,      "   File ($file) fetched using $method" );
-    ok( -s $file,   "   File ($file) has size" );
 
-    unlink $file;
+    my $file = $ff->fetch( to => 'tmp' );
+
+    SKIP: {
+        skip "You do not have '$method' installed", 2 
+            if $File::Fetch::METHOD_FAIL->{$method} &&
+               $File::Fetch::METHOD_FAIL->{$method};
+                
+        ok( $file,      "   File ($file) fetched using $method" );
+        ok( -s $file,   "   File ($file) has size" );
+    
+        unlink $file;
+    }
 }
 
 

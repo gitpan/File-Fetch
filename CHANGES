@@ -1,3 +1,9 @@
+Changes for 0.03    Fri Jun 11 20:40:22 CEST 2004
+=================================================
+
+* Add I18N support
+* Add better error handling
+
 Changes for 0.02    Sat May 22 14:40:29 CEST 2004
 =================================================
 
