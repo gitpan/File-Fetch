@@ -5,6 +5,7 @@ use FileHandle;
 use File::Copy;
 use File::Spec 0.82;
 use File::Spec::Unix;
+use File::Fetch::Item;
 use File::Basename              qw[dirname];
 
 use Cwd                         qw[cwd];
@@ -18,7 +19,7 @@ use vars    qw[ $VERBOSE $PREFER_BIN $FROM_EMAIL $USER_AGENT
                 $FTP_PASSIVE $DEBUG
             ];
 
-$VERSION        = 0.01;
+$VERSION        = 0.02;
 $PREFER_BIN     = 0;        # XXX TODO implement
 $FROM_EMAIL     = 'File-Fetch@example.com';
 $USER_AGENT     = 'File::Fetch/$VERSION';
@@ -733,6 +734,16 @@ and paths on any OS that isn't a Unix. C<LWP> however Does The Right
 Thing, so it's easier to use that.
 Besides, if you're just copying a file, you can probably do it 
 yourself :)
+
+=head2 So how do I use a proxy with File::Fetch?
+
+C<File::Fetch> currently only supports proxies with LWP::UserAgent. 
+You will need to set your environment variables accordingly. For 
+example, to use an ftp proxy:
+
+    $ENV{ftp_proxy} = 'foo.com';
+
+Refer to the LWP::UserAgent manpage for more details.
 
 =head1 TODO
 

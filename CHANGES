@@ -1,3 +1,10 @@
+Changes for 0.02    Sat May 22 14:40:29 CEST 2004
+=================================================
+
+* Add an extra 'FAQ' entry
+* Include a 'use File::Fetch::Item'
+
+
 Changes for 0.01    Tue May  4 15:48:24 CEST 2004
 =================================================
 
