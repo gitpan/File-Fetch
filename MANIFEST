@@ -1,0 +1,8 @@
+Makefile.PL
+MANIFEST
+README
+CHANGES
+lib/File/Fetch.pm
+lib/File/Fetch/Item.pm
+t/01_File-Fetch.t
+META.yml                                 Module meta-data (added by MakeMaker)
