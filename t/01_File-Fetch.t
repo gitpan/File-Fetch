@@ -9,7 +9,8 @@ use Cwd             qw[cwd];
 use File::Basename  qw[basename];
 use Data::Dumper;
 
-warn qq[
+unless( $ENV{PERL_CORE} ) {
+    warn qq[
 
 ####################### NOTE ##############################
 
@@ -22,7 +23,8 @@ to no fault of the module itself.
 
 ];
 
-sleep 3;
+    sleep 3;
+}
 
 use_ok('File::Fetch');
 use_ok('File::Fetch::Item');
@@ -118,7 +120,7 @@ for my $entry (@$map) {
 {   my $uri = 'rsync://cpan.pair.com/CPAN/MIRRORING.FROM';
 
     for (qw[rsync]) {
-	_fetch_uri( rsync => $uri, $_ );
+        _fetch_uri( rsync => $uri, $_ );
     }
 }
 
@@ -127,25 +129,30 @@ sub _fetch_uri {
     my $uri     = shift;
     my $method  = shift or return;
 
-    ### stupid warnings ###
-    $File::Fetch::METHODS =
-    $File::Fetch::METHODS = { $type => [$method] };
-
-    my $ff  = File::Fetch->new( uri => $uri );
-
-    ok( $ff,        "FF object for $uri (will fetch with $method)" );
-
-    my $file = $ff->fetch( to => 'tmp' );
-
     SKIP: {
-        skip "You do not have '$method' installed", 2
-            if $File::Fetch::METHOD_FAIL->{$method} &&
-               $File::Fetch::METHOD_FAIL->{$method};
-
-        ok( $file,      "   File ($file) fetched using $method" );
-        ok( -s $file,   "   File ($file) has size" );
-
-        unlink $file;
+        skip "'$method' fetching tests disabled under perl core", 3
+                if $ENV{PERL_CORE};
+    
+        ### stupid warnings ###
+        $File::Fetch::METHODS =
+        $File::Fetch::METHODS = { $type => [$method] };
+    
+        my $ff  = File::Fetch->new( uri => $uri );
+    
+        ok( $ff,        "FF object for $uri (will fetch with $method)" );
+    
+        my $file = $ff->fetch( to => 'tmp' );
+    
+        SKIP: {
+            skip "You do not have '$method' installed", 2
+                if $File::Fetch::METHOD_FAIL->{$method} &&
+                   $File::Fetch::METHOD_FAIL->{$method};
+    
+            ok( $file,      "   File ($file) fetched using $method" );
+            ok( -s $file,   "   File ($file) has size" );
+    
+            unlink $file;
+        }
     }
 }
 
