@@ -6,7 +6,7 @@ WriteMakefile (
     VERSION_FROM    => 'lib/File/Fetch.pm', # finds $VERSION
     dist            => { COMPRESS => 'gzip -9f', SUFFIX => 'gz' },
     PREREQ_PM       => { 
-                        'IPC::Cmd'                  => 0.04,
+                        'IPC::Cmd'                  => 0.36,
                         'Test::More'                => 0, 
                         'File::Copy'                => 0,
                         'File::Spec'                => 0.82,
@@ -16,6 +16,7 @@ WriteMakefile (
                         'Module::Load::Conditional' => 0.04,
                         'Locale::Maketext::Simple'  => 0,
                     },
+    INSTALLDIRS     => ( $] >= 5.009005 ? 'perl' : 'site' ),
     AUTHOR          => 'Jos Boumans <kane[at]cpan.org>',
 	ABSTRACT        => 'Generic file fetching code'
 );     
