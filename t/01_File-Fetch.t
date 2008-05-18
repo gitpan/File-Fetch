@@ -22,7 +22,7 @@ unless( $ENV{PERL_CORE} ) {
 
 Some of these tests assume you are connected to the
 internet. If you are not, or if certain protocols or hosts
-are blocked and/or firewalled, these tests will fail due
+are blocked and/or firewalled, these tests could fail due
 to no fault of the module itself.
 
 ###########################################################
@@ -206,6 +206,11 @@ sub _fetch_uri {
             skip "You do not have '$method' installed/available", 3
                 if $File::Fetch::METHOD_FAIL->{$method} &&
                    $File::Fetch::METHOD_FAIL->{$method};
+                
+            ### if the file wasn't fetched, it may be a network/firewall issue                
+            skip "Fetch failed; no network connectivity for '$type'?", 3 
+                unless $file;
+                
             ok( $file,          "   File ($file) fetched with $method ($uri)" );
             ok( $file && -s $file,   
                                 "   File has size" );
