@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               File-Fetch
-version:            0.24
+version:            0.26
 abstract:           Generic file fetching code
 author:
     - Jos Boumans <kane[at]cpan.org>
