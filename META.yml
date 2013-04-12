@@ -29,4 +29,4 @@ requires:
   Test::More: 0
 resources:
   repository: https://github.com/jib/file-fetch
-version: 0.40
+version: 0.42
