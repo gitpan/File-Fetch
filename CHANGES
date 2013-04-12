@@ -1,3 +1,7 @@
+Changes for 0.40        Fri Apr 12 11:18:52 2013
+=================================================
+* Added git:// url support
+
 Changes for 0.38        Thu Jan 10 20:52:53 2013
 =================================================
 * Add support for an optional tempdir_root
